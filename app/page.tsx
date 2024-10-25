@@ -1,101 +1,185 @@
-import Image from "next/image";
+"use client"
+
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area"
+
+import Contact from "@/components/Contact";
+
+import { Clock, Coins, Search} from "lucide-react";
+import { Wallet } from "lucide-react";
+import { ClipboardList } from "lucide-react";
+import { Loader } from "lucide-react";
+import { SendHorizonal } from "lucide-react";
+
+import Link from "next/link";
+import { signOut, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useState } from "react";
+
+import User from "@/types/User";
+import Message from "@/types/Message";
+import { ObjectId } from "mongodb";
+
+import { getContacts, loadMessages, sendMessage } from "@/actions/actions";
+
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+  const {data: session, status} = useSession();
+  const router = useRouter();
+  const [contacts, setContacts] = useState<Map<ObjectId, User>>();
+  const [selectedChat, setSelectedChat] = useState<ObjectId>();
+  const [message, setMessage] = useState("");
+  const [search, setSearch] = useState("");
+  const [chatHistory, setChatHistory] = useState<Message[]>([]);
+
+  const fetchData = async () =>
+  {
+      const loadedContacts = await getContacts(userId);
+      setContacts(loadedContacts);
+      console.log(loadedContacts);
+  };
+    
+  // Handle authentication
+  let userName : string | undefined;
+  let userId : ObjectId;
+  let userEmail : string;
+  let userBalance : number;
+
+  useEffect(() => {
+    console.log(status);
+      if (status === 'authenticated' && session.user)
+      {
+        userName = session.user.name;
+        userId = session.user.id;
+        userEmail = session.user.email;
+        userBalance = session.user.balance;
+
+        fetchData();
+      }
+      else if (status === 'unauthenticated')
+      {
+          router.push('/login');
+          return;
+      }
+      else if (status === 'loading')
+      {
+        return;
+        /*return (
+          <div className="h-screen flex justify-center items-center">
+            <Loader className="h-6 w-6" />
+          </div>)*/
+      }
+      else
+      {
+        console.error("Authentication status is wrong");
+        return;
+    }
+  }, [status]);
+
+
+  // Components functions 
+  const contactCallback = async (contactId: ObjectId) => {
+    if (selectedChat && selectedChat == contactId)
+    {
+      setSelectedChat(contactId);
+      const messages = await loadMessages(selectedChat)
+      setChatHistory(messages);
+    }
+  }
+
+  const inputOnKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key == "Enter" && selectedChat)
+    {
+      sendMessage(userId, selectedChat, message)
+    }
+  }
+  
+  return (
+    <div className="h-screen flex flex-col">
+      <header className="bg-primary text-white p-2 text-center">
+        <h1 className="text-sm font-bold">🧝🧝 Signed in as {userName ? userName : "" }, <Link className="text-emerald-300" href={'/login'} onClick={async (e) => {await signOut()}}>Sign out</Link> 🧝🧝</h1>
+      </header>
+
+      <main className="flex flex-1 overflow-hidden">
+        <ResizablePanelGroup direction="horizontal">
+          <ResizablePanel defaultSize={25} maxSize={60} minSize={20}  className="flex bg-primary-foreground border-r border-contactsfg">
+            <div className="flex flex-col w-full gap-3 pt-3">
+              <div className="flex flex-row w-full justify-center items-center gap-2 px-3">
+                <Input placeholder="Search" type="text" spellCheck={false} className="h-8 font-extralight bg-gray-200 rounded-md"
+                  onChange={(e) => setSearch(e.target.value)} value={search} onBlur={(e) => setSearch("")}/>
+                <Button variant="ghost" className="hover:scale-110 h-8 transition-transform">
+                  <Search className="w-6 h-6" />
+                </Button>
+              </div>
+              <ScrollArea className="flex flex-col">
+              {/*<Contact name="EVERYONE" selected={"EVERYONE" == selectedChat} callback={() => contactCallback("EVERYONE")}/>*/}
+
+                {contacts && Array.from(contacts.values()).map((contact) => (
+                  contact._id &&
+                  (search.length == 0 || contact.name.toLowerCase().includes(search.toLocaleLowerCase())) &&
+
+                   <Contact key={contact._id.toString()}
+                            name={contact.name}
+                            selected={contact._id == selectedChat}
+                            callback={() => contactCallback(contact._id)}/>
+                ))}
+
+              </ScrollArea>
+            </div>
+          </ResizablePanel>
+
+          <ResizableHandle/>
+
+          <ResizablePanel defaultSize={75} maxSize={80} minSize={40}
+                          className="relative flex flex-col justify-between items-center overflow-hidden bg-emerald-100">
+
+            <div className="absolute -left-[10%] w-[40%] opacity-60 blur-3xl aspect-square rounded-full bg-gradient-to-tr from-emerald-400 to-blue-100 z-10"></div>
+            <div className="absolute left-[70%] w-[40%] opacity-40 blur-3xl aspect-square rounded-full bg-gradient-to-tr from-emerald-500 to-green-300 z-10"></div>
+            <div className="absolute left-[30%] top-[70%] w-[50%] opacity-70 blur-3xl aspect-square rounded-full bg-gradient-to-tr from-teal-400 to-cyan-300 z-10"></div>
+
+            <div className="w-full flex justify-between items-center bg-primary-foreground p-2 z-20">
+
+            {contacts && selectedChat ? (
+              <h2 className="text-base font-bold p-2">{contacts.get(selectedChat)?.name} 🧝</h2>
+              ) : (
+                <h2 className="text-base font-bold p-2">Select a chat to start messaging 🧝</h2>
+              )}
+
+              <div className="flex justify-center items-center gap-6 px-2">
+                <Wallet className="w-6 h-6" />
+                <ClipboardList className="w-6 h-6"/>
+                <Clock className="w-6 h-6"/>
+                <div className="flex rounded-md px-2 py-1.5 gap-1 bg-gradient-to-tr from-emerald-100 to-green-300">
+                  <span className="font-semibold">1000</span>
+                  <Coins className="w-6 h-6" />
+                </div>
+              </div>
+            </div>
+
+            <ScrollArea className="flex-1 w-full z-20">
+              {/*<div className="flex flex-col justify-end h-full text-right p-4">
+                {chatHistory && chatHistory.map(({from, text}, index) => (
+                  <div className="w-full h-5" key={index}> {from} : {message} </div>
+                ))}
+              </div>*/}
+            </ScrollArea>
+
+            <div className="w-full flex items-center bg-white z-20 px-4">
+              <Input type="text" autoFocus={true/*add Onblur*/} placeholder="Write a message..." className="flex-grow h-12 w-full text-black"
+                      value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={inputOnKeyDown}/>
+              {message.length != 0 && <SendHorizonal className="h-3/4 w-auto p-1.5 rounded-md bg-emerald-200" />}
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
