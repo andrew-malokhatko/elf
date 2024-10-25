@@ -1,21 +1,23 @@
 "use server"
 
 import client from "@/lib/db";
-import User from "@/types/User";
-import Chat from "@/types/Chat";
+import User from "@/types/server/User";
+import Chat from "@/types/server/Chat";
 import { ObjectId } from "mongodb";
-import Message from "@/types/Message";
+import Message from "@/types/server/Message";
 
-export default async function sendmessage(from: ObjectId, to: ObjectId, message: string)
+export default async function sendmessage(fromId: string, toId: string, message: string)
 {
-    console.log("Sending message")
+    // Convert string to ObjectId
+    const fromObjectId = new ObjectId(fromId);
+    const toObjectId = new ObjectId(toId);
 
     const db = client.db("elfdb");
     const users = db.collection<User>("users");
     const chats = db.collection<Chat>("chats");
 
-    const userFrom = await users.findOne({from});
-    const userTo = await users.findOne({to});
+    const userFrom = await users.findOne({fromObjectId});
+    const userTo = await users.findOne({toObjectId});
 
     if (!userFrom || !userTo)
     {

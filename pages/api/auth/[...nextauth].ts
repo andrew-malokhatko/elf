@@ -1,10 +1,10 @@
 "use server"
 
-import NextAuth from "next-auth";
+import NextAuth, {User} from "next-auth";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import CredentialsProvider from "next-auth/providers/credentials";
-import User from "@/types/User";
 import client from "@/lib/db";
+import myUser from "@/types/server/User";
 
 export default NextAuth({
     //adapter: MongoDBAdapter(client),
@@ -22,36 +22,29 @@ export default NextAuth({
 
             async authorize(credentials, req) {
 
-                console.log("Authorizing")
-
                 if (!credentials?.email || !credentials?.password) {
                     throw new Error('Email and password are required')
                 }
 
-                console.log("Reached authorization function")
-
                 const db = client.db('elfdb');
-                const users = db.collection<User>('users');
+                const users = db.collection<myUser>('users');
                 
                 const user = await users.findOne({email: credentials.email});
                 console.log(credentials.email);
 
                 if (!user) {
-                    console.log("Not user");
                     throw new Error('No user found for this email');
                 }
-                console.log("passed not user");
 
                 if (user.password == credentials.password)
                 {
                     console.log("Authorized");
                     return ({
-                        id: user._id,
+                        _id: user._id.toString(),
                         email: user.email,
                         name: user.name,
-                        balance: 0,
-                        
-                    })
+                        balance: user.balance || 0
+                    }) as User
                 }
                 return null;
             }
@@ -59,33 +52,29 @@ export default NextAuth({
     ],
 
 
-    
     callbacks: {
-        async session({ session, user, token }) {
-
-        console.log("Session Callback")
-
-          const users = client.db().collection('users');
-          const dbUser = await users.findOne({ email: session.user?.email });
-
-          if (!dbUser)
-          {
-            return session;
-          }
-    
-          session.user.id = dbUser._id;
-          session.user.balance = dbUser.balance;
-    
-          return session;
-        },
-        async jwt({ token, user })
-        {
+        async jwt({ token, user, account }) {
+            //console.log("JWT Callback Input:", { token, user, account })
+            
             if (user) {
-              token.id = user.id;
-              token.balance = user.balance; // Add custom fields to the JWT token
+              // First sign in
+              token._id = user._id
+              token.balance = user.balance
+              token.email = user.email
+              token.name = user.name
             }
-            return token;
-        },
+            
+            //console.log("JWT Callback Output:", token)
+            return token
+          },
+
+        async session({ session, token }) {
+          //console.log('Session Callback Input:', { session, token })
+          session.user._id = token._id;
+          session.user.balance = token.balance;
+          //console.log("Session Callback Output:", session)
+          return session;
+        }
     },
 
     session: {

@@ -3,21 +3,29 @@
 import client from "@/lib/db";
 import { ObjectId } from "mongodb";
 
-import Chat from "@/types/Chat";
-import Message from "@/types/Message";
+import Chat from "@/types/server/Chat";
+import Message from "@/types/server/Message";
 
-export default async function loadmessages(chatId: ObjectId)
+export default async function loadmessages(chatId: string)
 {
+    // Convert string to ObjectId
+    const chatObjectId = new ObjectId(chatId);
+
     const db = client.db("elfdb");
     const chats = db.collection<Chat>("chats");
 
-    const chat = await chats.findOne(ObjectId);
+    const chat = await chats.findOne(chatObjectId);
 
     if (!chat)
     {
-        console.error("MY: Could't send a message. Please go to pages/api/loadmessages.ts");
+        console.error("MY: Could't load messages. Send messages first. Please go to pages/api/loadmessages.ts");
         return [];
     }
 
-    return chat.messages.slice(0, 100);
+    const serializedMessages = chat.messages.map((message) => ({
+        ...message,
+        from: message.from.toString()
+    }));
+
+    return serializedMessages.slice(0, 100);
 }

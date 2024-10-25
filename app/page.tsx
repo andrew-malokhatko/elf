@@ -23,45 +23,37 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useState } from "react";
 
-import User from "@/types/User";
-import Message from "@/types/Message";
-import { ObjectId } from "mongodb";
+import UserClient from "@/types/client/UserClient";
+import MessageClient from "@/types/client/MessageClient";
 
 import { getContacts, loadMessages, sendMessage } from "@/actions/actions";
+import LoadingPage from "@/components/Loading";
 
 
 export default function Home() {
 
   const {data: session, status} = useSession();
   const router = useRouter();
-  const [contacts, setContacts] = useState<Map<ObjectId, User>>();
-  const [selectedChat, setSelectedChat] = useState<ObjectId>();
+  const [contacts, setContacts] = useState<Map<string, UserClient>>();
+  const [selectedChat, setSelectedChat] = useState<string>();
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState("");
-  const [chatHistory, setChatHistory] = useState<Message[]>([]);
+  const [chatHistory, setChatHistory] = useState<MessageClient[]>([]);
 
-  const fetchData = async () =>
-  {
-      const loadedContacts = await getContacts(userId);
-      setContacts(loadedContacts);
-      console.log(loadedContacts);
+const fetchData = async () => {
+
+    if (session?.user._id)
+      {
+        const loadedContacts = await getContacts(session.user._id);
+        setContacts(loadedContacts);
+      }
   };
-    
-  // Handle authentication
-  let userName : string | undefined;
-  let userId : ObjectId;
-  let userEmail : string;
-  let userBalance : number;
 
   useEffect(() => {
     console.log(status);
-      if (status === 'authenticated' && session.user)
+    if (status === 'authenticated' && session.user)
       {
-        userName = session.user.name;
-        userId = session.user.id;
-        userEmail = session.user.email;
-        userBalance = session.user.balance;
-
+        console.log(session);
         fetchData();
       }
       else if (status === 'unauthenticated')
@@ -71,6 +63,7 @@ export default function Home() {
       }
       else if (status === 'loading')
       {
+        //  <LoadingPage></LoadingPage>
         return;
         /*return (
           <div className="h-screen flex justify-center items-center">
@@ -79,33 +72,31 @@ export default function Home() {
       }
       else
       {
-        console.error("Authentication status is wrong");
         return;
     }
-  }, [status]);
+  }, [status, session, router]);
 
 
   // Components functions 
-  const contactCallback = async (contactId: ObjectId) => {
-    if (selectedChat && selectedChat == contactId)
-    {
-      setSelectedChat(contactId);
-      const messages = await loadMessages(selectedChat)
-      setChatHistory(messages);
-    }
-  }
+  const contactOnclick = async (contactId: string) => {
+    setSelectedChat(contactId);
 
+    const messages = await loadMessages(contactId);
+    setChatHistory(messages);
+  }
+  
   const inputOnKeyDown = (e: React.KeyboardEvent) => {
     if (e.key == "Enter" && selectedChat)
     {
-      sendMessage(userId, selectedChat, message)
+      // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      sendMessage("", selectedChat, message)
     }
   }
-  
+
   return (
     <div className="h-screen flex flex-col">
       <header className="bg-primary text-white p-2 text-center">
-        <h1 className="text-sm font-bold">🧝🧝 Signed in as {userName ? userName : "" }, <Link className="text-emerald-300" href={'/login'} onClick={async (e) => {await signOut()}}>Sign out</Link> 🧝🧝</h1>
+        <h1 className="text-sm font-bold">🧝🧝 Signed in as {session?.user.name}, <Link className="text-emerald-300" href={'/login'} onClick={async (e) => {await signOut()}}>Sign out</Link> 🧝🧝</h1>
       </header>
 
       <main className="flex flex-1 overflow-hidden">
@@ -120,18 +111,17 @@ export default function Home() {
                 </Button>
               </div>
               <ScrollArea className="flex flex-col">
-              {/*<Contact name="EVERYONE" selected={"EVERYONE" == selectedChat} callback={() => contactCallback("EVERYONE")}/>*/}
-
                 {contacts && Array.from(contacts.values()).map((contact) => (
                   contact._id &&
                   (search.length == 0 || contact.name.toLowerCase().includes(search.toLocaleLowerCase())) &&
 
-                   <Contact key={contact._id.toString()}
-                            name={contact.name}
-                            selected={contact._id == selectedChat}
-                            callback={() => contactCallback(contact._id)}/>
+                  <Contact 
+                    key={contact._id}
+                    name={contact.name}
+                    selected={contact._id === selectedChat}
+                    onclick={() => contactOnclick(contact._id)}
+                  />
                 ))}
-
               </ScrollArea>
             </div>
           </ResizablePanel>
@@ -158,22 +148,30 @@ export default function Home() {
                 <ClipboardList className="w-6 h-6"/>
                 <Clock className="w-6 h-6"/>
                 <div className="flex rounded-md px-2 py-1.5 gap-1 bg-gradient-to-tr from-emerald-100 to-green-300">
-                  <span className="font-semibold">1000</span>
+                  <span className="font-semibold">{session?.user.balance}</span>
                   <Coins className="w-6 h-6" />
                 </div>
               </div>
             </div>
 
             <ScrollArea className="flex-1 w-full z-20">
-              {/*<div className="flex flex-col justify-end h-full text-right p-4">
-                {chatHistory && chatHistory.map(({from, text}, index) => (
-                  <div className="w-full h-5" key={index}> {from} : {message} </div>
-                ))}
-              </div>*/}
+              <div className="flex flex-col justify-end h-full text-right p-4">
+                {chatHistory.length > 0 ? (
+                  chatHistory.map(({from, text, sentAt}, index) => (
+                    <div className="w-full h-5" key={index}>
+                      {from} : {text} : {sentAt.getDate()}
+                    </div>
+                  ))
+                ) : (
+                  <div className="w-full h-full flex justify-center items-center">
+                    <h1 className="text-gray-600 bg-white bg-opacity-40 p-3 rounded-3xl">Start Messaging...</h1>
+                  </div>
+                )}
+              </div>
             </ScrollArea>
 
             <div className="w-full flex items-center bg-white z-20 px-4">
-              <Input type="text" autoFocus={true/*add Onblur*/} placeholder="Write a message..." className="flex-grow h-12 w-full text-black"
+              <Input type="text" autoFocus={true} placeholder="Write a message..." className="flex-grow h-12 w-full text-black"
                       value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={inputOnKeyDown}/>
               {message.length != 0 && <SendHorizonal className="h-3/4 w-auto p-1.5 rounded-md bg-emerald-200" />}
             </div>

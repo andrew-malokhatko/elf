@@ -4,7 +4,7 @@ import { ObjectId } from 'mongodb';
 declare module 'next-auth' {
   interface Session {
     user: {
-      id: ObjectId;
+      _id: string;
       balance: number;
       email: string;
       name: string;
@@ -13,7 +13,17 @@ declare module 'next-auth' {
   }
 
   interface User {
-    id: ObjectId;
-    balance: number;
+    _id: string;
+    email: string,
+    name: string,
+    balance: number,
+    image?: string
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    _id: string
+    balance: number
   }
 }

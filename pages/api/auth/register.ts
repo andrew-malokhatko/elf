@@ -1,7 +1,7 @@
 "use server"
 
 import client from "@/lib/db";
-import User from "@/types/User";
+import User from "@/types/server/User";
 import { ObjectId } from "mongodb";
 
 export async function register(name: string, email: string, password: string) {
