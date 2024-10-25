@@ -14,7 +14,10 @@ export default async function loadmessages(chatId: string)
     const db = client.db("elfdb");
     const chats = db.collection<Chat>("chats");
 
-    const chat = await chats.findOne(chatObjectId);
+    console.log(chatObjectId);
+    console.log(chatId);
+
+    const chat = await chats.findOne({_id: chatObjectId});
 
     if (!chat)
     {

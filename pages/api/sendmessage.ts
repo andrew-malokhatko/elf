@@ -16,28 +16,45 @@ export default async function sendmessage(fromId: string, toId: string, message:
     const users = db.collection<User>("users");
     const chats = db.collection<Chat>("chats");
 
-    const userFrom = await users.findOne({fromObjectId});
-    const userTo = await users.findOne({toObjectId});
+    const userFrom = await users.findOne({_id: fromObjectId});
+    const userTo = await users.findOne({_id: toObjectId});
 
     if (!userFrom || !userTo)
     {
         return false;
     }
 
-    const participants = [userFrom._id, userTo._id].sort();
-    let chat = await chats.findOne({participants: participants});
+    // Convert ObjectIds to numbers for sorting and create unique ID for each chat using XOR
+    const fromIdNum = parseInt(fromId, 16);
+    const toIdNum = parseInt(toId, 16);
 
+    const chatId = new ObjectId(
+        Buffer.from(
+            ((BigInt(fromIdNum) ^ BigInt(toIdNum)) + 
+            (BigInt(Math.min(fromIdNum, toIdNum)) * BigInt(Number.MAX_SAFE_INTEGER)))
+            .toString(16)
+            .slice(0, 24)
+        , 'hex')
+    );
+
+    console.log(chatId)
+
+    let chat = await chats.findOne({_id: chatId});
+    console.log(chat);
     if (!chat)
     {
+        const participants = [userFrom._id, userTo._id].sort();
+
         const newChat: Chat = {
-            participiants: participants,
+            _id: chatId,
+            participants: participants,
             messages: []
         }
 
         const result = await chats.insertOne(newChat);
         if (!result)
         {
-            console.log("Could not insert to database")
+            console.error("Could not insert to database")
             return false;
         }
 
@@ -69,7 +86,7 @@ export default async function sendmessage(fromId: string, toId: string, message:
     };
 
     addChatToUser(userFrom._id);
-    addChatToUser(userFrom._id);
+    addChatToUser(userTo._id);
 
     return true;
 }
