@@ -38,7 +38,7 @@ const ChatSection: React.FC<ChatSectionProps> = ({selectedChat, session} : ChatS
         const fetchChatHistory = async () => {
             if (selectedChat.id) {
                 // Assume fetchChatHistory is a function that fetches chat history for the selected chat
-                const history = await loadMessages(selectedChat.id);
+                const history = await loadMessages(session.user._id, selectedChat.id);
                 console.log(history);
                 setHistory(history);
             }
@@ -76,17 +76,36 @@ const ChatSection: React.FC<ChatSectionProps> = ({selectedChat, session} : ChatS
         </div>
       </div>
 
-      <ScrollArea className="flex-1 w-full z-20">
-        <div className="flex flex-col justify-end h-full text-right p-4">
+      <ScrollArea className="flex-1 w-full z-20" scrollToBottom>
+        <div className="flex flex-col h-full p-4 space-y-4">
           {history.length > 0 ? (
-            history.map(({ from, text, sentAt }, index) => (
-              <div className="w-full h-5 text-base text-black" key={index}>
-                {from} : {text} : {sentAt.getDate()}
-              </div>
-            ))
+            history.map(({ from, text, sentAt }, index) => {
+              const isCurrentUser = (from === session.user.name);
+              return (
+                <div 
+                  className={`flex w-full ${isCurrentUser ? 'justify-end' : 'justify-start'}`} 
+                  key={index}
+                >
+                  <div 
+                    className={`max-w-[70%] rounded-xl px-3 py-1.5 break-words
+                      ${isCurrentUser 
+                        ? 'bg-emerald-300 text-black ml-auto' 
+                        : 'bg-gray-100 text-black mr-auto'
+                      }`}
+                  >
+                    <p className="text-sm">{text}</p>
+                    <span className="text-xs opacity-70">
+                      {sentAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
+              )
+            })
           ) : (
             <div className="w-full h-full flex justify-center items-center">
-              <h1 className="text-gray-600 bg-white bg-opacity-40 p-3 rounded-3xl">Start Messaging...</h1>
+              <h1 className="text-gray-600 bg-white bg-opacity-40 p-3 rounded-3xl">
+                Start Messaging...
+              </h1>
             </div>
           )}
         </div>

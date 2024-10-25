@@ -6,18 +6,40 @@ import { ObjectId } from "mongodb";
 import Chat from "@/types/server/Chat";
 import Message from "@/types/server/Message";
 
-export default async function loadmessages(chatId: string)
+export default async function loadmessages(fromId: string, toId: string)
 {
-    // Convert string to ObjectId
-    const chatObjectId = new ObjectId(chatId);
-
     const db = client.db("elfdb");
     const chats = db.collection<Chat>("chats");
+    const users = db.collection("users");
 
-    console.log(chatObjectId);
-    console.log(chatId);
+    // Convert ObjectIds to numbers for sorting and create unique ID for each chat using XOR
+    const fromIdNum = parseInt(fromId, 16);
+    const toIdNum = parseInt(toId, 16);
 
-    const chat = await chats.findOne({_id: chatObjectId});
+    // Get user names from db and store in map
+    const userMap = new Map<string, string>();
+
+    const [fromUser, toUser] = await Promise.all([
+        users.findOne({ _id: new ObjectId(fromId) }),
+        users.findOne({ _id: new ObjectId(toId) })
+    ]);
+
+    if (fromUser && toUser) {
+        userMap.set(fromId, fromUser.name);
+        userMap.set(toId, toUser.name);
+    }
+    
+
+    const chatId = new ObjectId(
+        Buffer.from(
+            ((BigInt(fromIdNum) ^ BigInt(toIdNum)) + 
+            (BigInt(Math.min(fromIdNum, toIdNum)) * BigInt(Number.MAX_SAFE_INTEGER)))
+            .toString(16)
+            .slice(0, 24)
+        , 'hex')
+    );
+
+    const chat = await chats.findOne({_id: chatId});
 
     if (!chat)
     {
@@ -27,7 +49,7 @@ export default async function loadmessages(chatId: string)
 
     const serializedMessages = chat.messages.map((message) => ({
         ...message,
-        from: message.from.toString()
+        from: userMap.get((message.from).toString()) || "Deleted user"
     }));
 
     return serializedMessages.slice(0, 100);

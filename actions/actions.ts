@@ -12,9 +12,9 @@ export async function sendMessage(from: string, to: string, message: string)
     return await sendmessage(from, to, message);
 }
 
-export async function loadMessages(chat: string)
+export async function loadMessages(from: string, to: string)
 {
-    return await loadmessages(chat);
+    return await loadmessages(from, to);
 }
 
 export async function getContacts(userId: string)
