@@ -1,6 +1,6 @@
 "use client"
 
-import Contact from './Contact';
+import Contact from '@/components/Contact';
 import UserClient from "@/types/client/UserClient";
 
 import {Search} from "lucide-react";

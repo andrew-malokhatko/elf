@@ -10,6 +10,9 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+  ::selection {
+    @apply bg-emerald-200; /* You can change the bg and text colors */
+  }
 }
 
 @layer base {

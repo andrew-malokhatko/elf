@@ -10,23 +10,18 @@ import { loadMessages, sendMessage } from "@/actions/actions";
 import { Session } from "next-auth";
 import MessageClient from "@/types/client/MessageClient";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 interface ChatSectionProps {
-  //contacts: Map<string, { name: string }>;
     selectedChat: {id: string | null, name: string | null},
     session: Session;
-
-  //session: { user: { balance: number } } | null;
-  //chatHistory: Array<{ from: string; text: string; sentAt: Date }>;
-  //message: string;
-  //setMessage: (value: string) => void;
-  //inputOnKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 const ChatSection: React.FC<ChatSectionProps> = ({selectedChat, session} : ChatSectionProps) => {
     const [message, setMessage] = useState("");
     const [history, setHistory] = useState<MessageClient[]>([]);
+
+    const endOfChatRef = useRef<HTMLDivElement>(null);
 
     const inputOnKeyDown = async (e: React.KeyboardEvent) => {
         if (e.key == "Enter" && selectedChat.id)
@@ -34,18 +29,23 @@ const ChatSection: React.FC<ChatSectionProps> = ({selectedChat, session} : ChatS
             await sendMessage(session.user._id, selectedChat.id, message)
         }
     }
+
     useEffect(() => {
         const fetchChatHistory = async () => {
-            if (selectedChat.id) {
-                // Assume fetchChatHistory is a function that fetches chat history for the selected chat
+            if (selectedChat.id)
+            {
                 const history = await loadMessages(session.user._id, selectedChat.id);
-                console.log(history);
+                //console.log(history);
                 setHistory(history);
             }
         };
 
         fetchChatHistory();
     }, [selectedChat]);
+
+    useEffect(() => {
+      endOfChatRef.current?.scrollIntoView(false);
+    }, [history])
   
   return (
     <ResizablePanel
@@ -76,38 +76,35 @@ const ChatSection: React.FC<ChatSectionProps> = ({selectedChat, session} : ChatS
         </div>
       </div>
 
-      <ScrollArea className="flex-1 w-full z-20" scrollToBottom>
-        <div className="flex flex-col h-full p-4 space-y-4">
-          {history.length > 0 ? (
-            history.map(({ from, text, sentAt }, index) => {
-              const isCurrentUser = (from === session.user.name);
-              return (
-                <div 
-                  className={`flex w-full ${isCurrentUser ? 'justify-end' : 'justify-start'}`} 
-                  key={index}
-                >
+      <ScrollArea className="w-full z-20">
+        <div className="flex relative flex-col h-full p-4 space-y-4" >
+          <div className="flex w-full flex-col space-y-2">
+            {history.length > 0 ? (
+              history.map(({ from, text, sentAt }, index) => {
+                const isCurrentUser = (from === session.user.name);
+                return (
                   <div 
                     className={`max-w-[70%] rounded-xl px-3 py-1.5 break-words
                       ${isCurrentUser 
                         ? 'bg-emerald-300 text-black ml-auto' 
                         : 'bg-gray-100 text-black mr-auto'
                       }`}
+                    key={index}
                   >
                     <p className="text-sm">{text}</p>
-                    <span className="text-xs opacity-70">
+                    <span className="text-xs opacity-70 select-none">
                       {sentAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                </div>
-              )
-            })
-          ) : (
-            <div className="w-full h-full flex justify-center items-center">
-              <h1 className="text-gray-600 bg-white bg-opacity-40 p-3 rounded-3xl">
+                )
+              })
+            ) : (
+              <h1 className="text-gray-600 bg-white bg-opacity-40 p-3 rounded-3xl w-fit mx-auto">
                 Start Messaging...
               </h1>
-            </div>
-          )}
+            )}
+            <div className="absolute bottom-0" ref={endOfChatRef} />
+          </div>
         </div>
       </ScrollArea>
 

@@ -2,8 +2,8 @@
 
 import { useSession } from 'next-auth/react';
 import Header from '@/components/ui/Header';
-import ContactSection from '@/components/ContactSection';
-import ChatSection from '@/components/ChatSection';
+import ContactSection from '@/components/sections/ContactSection';
+import ChatSection from '@/components/sections/ChatSection';
 import LoadingPage from '@/components/Loading';
 import { ResizableHandle, ResizablePanelGroup } from '@/components/ui/resizable';
 import { useState } from 'react';
