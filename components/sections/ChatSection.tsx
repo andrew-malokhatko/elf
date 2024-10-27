@@ -11,11 +11,18 @@ import { Session } from "next-auth";
 import MessageClient from "@/types/client/MessageClient";
 
 import { useEffect, useState, useRef } from "react";
+import Message from "@/components/Message";
 
 interface ChatSectionProps {
     selectedChat: {id: string | null, name: string | null},
     session: Session;
 }
+
+/*
+    from: string,
+    text: string,
+    sentAt: Date
+*/
 
 const ChatSection: React.FC<ChatSectionProps> = ({selectedChat, session} : ChatSectionProps) => {
     const [message, setMessage] = useState("");
@@ -26,7 +33,9 @@ const ChatSection: React.FC<ChatSectionProps> = ({selectedChat, session} : ChatS
     const inputOnKeyDown = async (e: React.KeyboardEvent) => {
         if (e.key == "Enter" && selectedChat.id)
         {
-            await sendMessage(session.user._id, selectedChat.id, message)
+            await sendMessage(session.user._id, selectedChat.id, message);
+            setMessage("");
+            setHistory([...history, {from: session.user.name, text: message, sentAt: new Date()}]);
         }
     }
 
@@ -83,19 +92,12 @@ const ChatSection: React.FC<ChatSectionProps> = ({selectedChat, session} : ChatS
               history.map(({ from, text, sentAt }, index) => {
                 const isCurrentUser = (from === session.user.name);
                 return (
-                  <div 
-                    className={`max-w-[70%] rounded-xl px-3 py-1.5 break-words
-                      ${isCurrentUser 
-                        ? 'bg-emerald-300 text-black ml-auto' 
-                        : 'bg-gray-100 text-black mr-auto'
-                      }`}
+                  <Message
                     key={index}
-                  >
-                    <p className="text-sm">{text}</p>
-                    <span className="text-xs opacity-70 select-none">
-                      {sentAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
+                    text={text}
+                    sentAt={sentAt}
+                    fromThisUser={isCurrentUser}
+                  />
                 )
               })
             ) : (
@@ -119,7 +121,7 @@ const ChatSection: React.FC<ChatSectionProps> = ({selectedChat, session} : ChatS
           onKeyDown={inputOnKeyDown}
         />
         {message.length !== 0 && (
-          <SendHorizonal className="h-3/4 w-auto p-1.5 rounded-md bg-emerald-200" />
+          <SendHorizonal className="h-3/4 w-auto p-1.5 rounded-md text-white bg-emerald-200" />
         )}
       </div>
 </ResizablePanel>
