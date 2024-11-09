@@ -1,4 +1,4 @@
-type MessageProps = {
+interface MessageProps {
   text: string;
   sentAt: Date;
   fromThisUser: boolean;

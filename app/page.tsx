@@ -6,14 +6,38 @@ import ContactSection from '@/components/sections/ContactSection';
 import ChatSection from '@/components/sections/ChatSection';
 import LoadingPage from '@/components/Loading';
 import { ResizableHandle, ResizablePanelGroup } from '@/components/ui/resizable';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { disconnectSocket, initSocket } from "@/client/socket";
+import { Socket } from 'socket.io-client';
 
 
 export default function Home() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const [isConnected, setIsConnected] = useState(false);
   const [selectedChat, setSelectedChat] = useState<{ id: string | null, name: string | null }>({ id: null, name: null });
+
+
+  useEffect(() => {
+    console.log("called use effect")
+
+    if (!session || !session.user._id) {
+      console.log("not session")
+      return;
+    }
+
+    const socket: Socket = initSocket(session.user._id);
+
+    console.log(`Actual userId: ${session.user._id}`);
+    socket.connect();
+    console.log("Connect called")
+
+    return () => {
+      console.log("socket closed")
+      disconnectSocket();
+    }
+  }, [session?.user._id]);
 
   if (status == "loading") {
     return <LoadingPage />;
@@ -23,7 +47,6 @@ export default function Home() {
     router.push("/login");
     return;
   }
-
 
   const userId = session.user._id;
   const userName = session.user.name;

@@ -37,10 +37,8 @@ export default async function sendmessage(fromId: string, toId: string, message:
         , 'hex')
     );
 
-    console.log(chatId)
-
     let chat = await chats.findOne({_id: chatId});
-    console.log(chat);
+
     if (!chat)
     {
         const participants = [userFrom._id, userTo._id].sort();

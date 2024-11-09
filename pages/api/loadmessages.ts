@@ -2,15 +2,15 @@
 
 import client from "@/lib/db";
 import { ObjectId } from "mongodb";
-
 import Chat from "@/types/server/Chat";
-import Message from "@/types/server/Message";
 
 export default async function loadmessages(fromId: string, toId: string)
 {
     const db = client.db("elfdb");
     const chats = db.collection<Chat>("chats");
     const users = db.collection("users");
+
+    console.log(fromId, toId)
 
     // Convert ObjectIds to numbers for sorting and create unique ID for each chat using XOR
     const fromIdNum = parseInt(fromId, 16);
@@ -43,7 +43,7 @@ export default async function loadmessages(fromId: string, toId: string)
 
     if (!chat)
     {
-        console.error("MY: Could't load messages. Send messages first. Please go to pages/api/loadmessages.ts");
+        //console.error("MY: Could't load messages. Send messages first. Please go to pages/api/loadmessages.ts");
         return [];
     }
 

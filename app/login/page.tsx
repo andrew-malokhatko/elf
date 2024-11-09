@@ -32,6 +32,7 @@ export default function LoginPage() {
     if (status === "authenticated")
     {
         Router.push('/');
+        return;
     }
 
     const validateForm = () => { // called inside handle submit

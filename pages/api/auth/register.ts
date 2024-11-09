@@ -5,8 +5,6 @@ import User from "@/types/server/User";
 import { ObjectId } from "mongodb";
 
 export async function register(name: string, email: string, password: string) {
-    console.log("Registering")
-
     if (!name || !email || !password) {
         return {ok: false, error: "All fields are required"};
     }
